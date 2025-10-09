@@ -1,0 +1,9 @@
+# Defaults for image training.
+
+in_channels: 31
+num_channels: 128
+layers: 8
+learn_sigma: False
+use_checkpoint: False
+dropout: 0.0
+predict_xstart: False
