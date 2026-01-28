@@ -25,44 +25,10 @@ from guided_diffusion.prior_model import PriorModel
 from guided_diffusion.image_datasets import load_hsi_data
 from torchvision import utils
 from measurement import denoising
-from utils import calc_psnr, calc_ssim, calc_sam
+from utils import calc_psnr, calc_ssim, calc_sam, estimate_sigma, estimate_cov, \
+    calc_covariance, random_build_spectral_lib, plot_spectrum, load_yaml
 from functools import partial
 
-
-def estimate_sigma(image, k, k_m=1):
-    assert k > k_m
-    image = np.array(image.to("cpu"))
-    image = np.transpose(image, [1, 2, 0])
-    blur = cv.blur(image, (k, k))
-    v = np.var(blur - image, axis=(0, 1))
-    std = np.sqrt(v*(k**2)/(k**2-k_m**2))
-    return th.from_numpy(std).to(dist_util.dev())
-
-
-def estimate_cov(image, k, k_m=1):
-    assert k > k_m
-    image = np.array(image.to("cpu"))
-    image = np.transpose(image, [1, 2, 0])
-    blur = cv.blur(image, (k, k))
-    noise = blur - image
-    noise = noise.reshape([-1, noise.shape[-1]])
-    cov = noise.T @ noise / noise.shape[0] * (k**2) / (k**2 - k_m**2)
-    cov[np.abs(cov) < 2e-3] = 0
-    return th.from_numpy(cov.astype(np.float32)).to(dist_util.dev())
-
-
-def random_build_spectral_lib(hsi, num):
-    hsi = hsi.reshape([hsi.shape[0], -1])
-    idx = np.random.choice(hsi.shape[1], num, replace=False)
-    return hsi[:, idx]
-
-
-def calc_covariance(noise, true):
-    noise = noise.reshape([noise.shape[0], -1])
-    true = true.reshape([true.shape[0], -1])
-    noise = noise - true
-    cov = noise @ noise.T / noise.shape[1]
-    return cov
 
 # added
 def load_noise_hsi(data_dir, batch_size):
@@ -75,18 +41,6 @@ def load_noise_hsi(data_dir, batch_size):
     for large_batch, model_kwargs in data:
         model_kwargs["ref_img"] = large_batch[1][0]
         yield model_kwargs, large_batch[0][0]
-
-
-def plot_spectrum(pred, target, save, pos=(0.5, 0.5)):
-    C, H, W = pred.shape
-    x, y = int(pos[0]*W), int(pos[1]*H)
-    pred = pred[:, y, x]
-    target = target[:, y, x]
-    plt.plot(pred, label="pred")
-    plt.plot(target, label="target")
-    plt.legend()
-    plt.savefig(save)
-    plt.close()
 
 
 def load_P():
@@ -255,11 +209,6 @@ def main():
     logger.log(f"average SSIM: {assim}")
     logger.log(f"average SAM: {asam}")
 
-
-def load_yaml(file_path: str) -> dict:
-    with open(file_path) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    return config
 
 if __name__ == "__main__":
     cfg = {

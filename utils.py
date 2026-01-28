@@ -7,6 +7,8 @@ import glob
 import random
 import cv2
 import piq
+import yaml
+import matplotlib.pyplot as plt
 
 
 def tensor_2_mode_product(tensor: torch.Tensor, P):
@@ -156,5 +158,67 @@ def denormalize(x, mean, std):
     x: (c, h, w)
     """
     return x * std + mean
+
+
+def load_yaml(file_path: str) -> dict:
+    """Load YAML configuration file."""
+    with open(file_path) as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    return config
+
+
+def estimate_sigma(image, k, k_m=1):
+    """Estimate noise standard deviation from image using blur method."""
+    from guided_diffusion import dist_util
+    assert k > k_m
+    image = np.array(image.to("cpu"))
+    image = np.transpose(image, [1, 2, 0])
+    blur = cv2.blur(image, (k, k))
+    v = np.var(blur - image, axis=(0, 1))
+    std = np.sqrt(v*(k**2)/(k**2-k_m**2))
+    return torch.from_numpy(std).to(dist_util.dev())
+
+
+def estimate_cov(image, k, k_m=1):
+    """Estimate noise covariance from image using blur method."""
+    from guided_diffusion import dist_util
+    assert k > k_m
+    image = np.array(image.to("cpu"))
+    image = np.transpose(image, [1, 2, 0])
+    blur = cv2.blur(image, (k, k))
+    noise = blur - image
+    noise = noise.reshape([-1, noise.shape[-1]])
+    cov = noise.T @ noise / noise.shape[0] * (k**2) / (k**2 - k_m**2)
+    cov[np.abs(cov) < 2e-3] = 0
+    return torch.from_numpy(cov.astype(np.float32)).to(dist_util.dev())
+
+
+def calc_covariance(noise, true):
+    """Calculate covariance between noise and true signal."""
+    noise = noise.reshape([noise.shape[0], -1])
+    true = true.reshape([true.shape[0], -1])
+    noise = noise - true
+    cov = noise @ noise.T / noise.shape[1]
+    return cov
+
+
+def random_build_spectral_lib(hsi, num):
+    """Build random spectral library from HSI data."""
+    hsi = hsi.reshape([hsi.shape[0], -1])
+    idx = np.random.choice(hsi.shape[1], num, replace=False)
+    return hsi[:, idx]
+
+
+def plot_spectrum(pred, target, save, pos=(0.5, 0.5)):
+    """Plot spectrum comparison at a given position."""
+    C, H, W = pred.shape
+    x, y = int(pos[0]*W), int(pos[1]*H)
+    pred = pred[:, y, x]
+    target = target[:, y, x]
+    plt.plot(pred, label="pred")
+    plt.plot(target, label="target")
+    plt.legend()
+    plt.savefig(save)
+    plt.close()
 
 

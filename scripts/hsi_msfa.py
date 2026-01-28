@@ -27,10 +27,10 @@ from guided_diffusion.prior_model import PriorModel
 from guided_diffusion.image_datasets import load_hsi_data
 from torchvision import utils
 from measurement import msfa2hsi, rgb2hsi, msfa2hsi_with_wb
-from utils import calc_psnr, calc_ssim, calc_sam, tensor_1_mode_product, tensor_2_mode_product
+from utils import calc_psnr, calc_ssim, calc_sam, tensor_1_mode_product, tensor_2_mode_product, \
+    estimate_sigma, estimate_cov, calc_covariance, random_build_spectral_lib, load_yaml
 from functools import partial
 from msfa import MSFAModel
-
 
 def plot_uncertainty(uncertainty, save):
     # def polygon_under_graph(x, y):
@@ -59,41 +59,6 @@ def plot_uncertainty(uncertainty, save):
     plt.colorbar()
     plt.savefig(save)
     plt.close()
-
-def estimate_sigma(image, k, k_m=1):
-    assert k > k_m
-    image = np.array(image.to("cpu"))
-    image = np.transpose(image, [1, 2, 0])
-    blur = cv.blur(image, (k, k))
-    v = np.var(blur - image, axis=(0, 1))
-    std = np.sqrt(v*(k**2)/(k**2-k_m**2))
-    return th.from_numpy(std).to(dist_util.dev())
-
-
-def estimate_cov(image, k, k_m=1):
-    assert k > k_m
-    image = np.array(image.to("cpu"))
-    image = np.transpose(image, [1, 2, 0])
-    blur = cv.blur(image, (k, k))
-    noise = blur - image
-    noise = noise.reshape([-1, noise.shape[-1]])
-    cov = noise.T @ noise / noise.shape[0] * (k**2) / (k**2 - k_m**2)
-    cov[np.abs(cov) < 2e-3] = 0
-    return th.from_numpy(cov.astype(np.float32)).to(dist_util.dev())
-
-
-def random_build_spectral_lib(hsi, num):
-    hsi = hsi.reshape([hsi.shape[0], -1])
-    idx = np.random.choice(hsi.shape[1], num, replace=False)
-    return hsi[:, idx]
-
-
-def calc_covariance(noise, true):
-    noise = noise.reshape([noise.shape[0], -1])
-    true = true.reshape([true.shape[0], -1])
-    noise = noise - true
-    cov = noise @ noise.T / noise.shape[1]
-    return cov
 
 msfa = MSFAModel(msfa_file="/home/root/project/stdm/dataset/MSFA16.npy")
 
@@ -292,11 +257,6 @@ def main():
     logger.log(f"average SSIM: {assim}")
     logger.log(f"average SAM: {asam}")
 
-
-def load_yaml(file_path: str) -> dict:
-    with open(file_path) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    return config
 
 if __name__ == "__main__":
     cfg = {

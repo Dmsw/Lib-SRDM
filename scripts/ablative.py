@@ -31,7 +31,8 @@ from guided_diffusion.icvl import load_icvl
 from guided_diffusion.cave import load_cave
 from torchvision import utils
 from measurement import rgb2hsi
-from utils import calc_psnr, calc_ssim, calc_sam, tensor_1_mode_product, tensor_2_mode_product, denoising
+from utils import calc_psnr, calc_ssim, calc_sam, tensor_1_mode_product, tensor_2_mode_product, \
+    denoising, estimate_cov, calc_covariance, plot_spectrum, load_yaml
 from functools import partial
 from srf_tools import SRFTool
 from guided_diffusion.low_rank_model import LowRankGradients
@@ -103,11 +104,6 @@ def sample_by_rgb(rgb_values, spectral_library, srf, n_samples, tau):
 
     return spectral_library[indices]
 
-def load_yaml(file_path: str) -> dict:
-    with open(file_path) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    return config
-
 if cfg['cfg_path'] is not None:
     cfg.update(load_yaml(cfg['cfg_path']))
 
@@ -118,25 +114,6 @@ P = th.from_numpy(srf.load_srf(cfg['srf_name']).astype(np.float32))
 u, s, vh = th.svd(P)
 print(s)
 
-
-def estimate_cov(image, k, k_m=1):
-    assert k > k_m
-    image = np.array(image.to("cpu"))
-    image = np.transpose(image, [1, 2, 0])
-    blur = cv.blur(image, (k, k))
-    noise = blur - image
-    noise = noise.reshape([-1, noise.shape[-1]])
-    cov = noise.T @ noise / noise.shape[0] * (k**2) / (k**2 - k_m**2)
-    cov[np.abs(cov) < 2e-3] = 0
-    return th.from_numpy(cov.astype(np.float32)).to(dist_util.dev())
-
-
-def calc_covariance(noise, true):
-    noise = noise.reshape([noise.shape[0], -1])
-    true = true.reshape([true.shape[0], -1])
-    noise = noise - true
-    cov = noise @ noise.T / noise.shape[1]
-    return cov
 
 # added
 def load_noise_hsi(data_dir, batch_size):
@@ -197,18 +174,6 @@ def load_icvl_test(data_dir, batch_size):
         rgb = tensor_1_mode_product(target, P.T)
         model_kwargs = {"ref_img":rgb}
         yield model_kwargs, target
-
-def plot_spectrum(pred, target, save, pos=(0.5, 0.5)):
-    C, H, W = pred.shape
-    x, y = int(pos[0]*W), int(pos[1]*H)
-    pred = pred[:, y, x]
-    target = target[:, y, x]
-    plt.plot(pred, label="pred")
-    plt.plot(target, label="target")
-    plt.legend()
-    plt.savefig(save)
-    plt.close()
-
 
 def main():
     th.manual_seed(42)

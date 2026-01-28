@@ -19,6 +19,7 @@ from guided_diffusion.script_util import (
     add_dict_to_argparser,
 )
 from guided_diffusion.train_util import TrainLoop
+from utils import load_yaml
 
 
 def main():
@@ -85,12 +86,6 @@ def create_argparser():
     parser = argparse.ArgumentParser()
     add_dict_to_argparser(parser, defaults)
     return parser
-
-
-def load_yaml(file_path: str) -> dict:
-    with open(file_path) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    return config
 
 
 def upgrade_by_config(args):

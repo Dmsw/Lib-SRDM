@@ -30,7 +30,8 @@ from guided_diffusion.ntire_gen import load_ntire2022
 from guided_diffusion.icvl import load_icvl_test
 from torchvision import utils
 from measurement import rgb2hsi
-from utils import calc_psnr, calc_ssim, calc_sam, tensor_1_mode_product, tensor_2_mode_product
+from utils import calc_psnr, calc_ssim, calc_sam, tensor_1_mode_product, tensor_2_mode_product, \
+    estimate_sigma, estimate_cov, calc_covariance, plot_spectrum, load_yaml
 from functools import partial
 from srf_tools import SRFTool
 from lib_and_mask import get_lib_and_mask
@@ -39,48 +40,6 @@ import pickle
 
 srf = SRFTool()
 P = th.from_numpy(srf.load_d400_srf().astype(np.float32))
-
-
-def estimate_sigma(image, k, k_m=1):
-    assert k > k_m
-    image = np.array(image.to("cpu"))
-    image = np.transpose(image, [1, 2, 0])
-    blur = cv.blur(image, (k, k))
-    v = np.var(blur - image, axis=(0, 1))
-    std = np.sqrt(v*(k**2)/(k**2-k_m**2))
-    return th.from_numpy(std).to(dist_util.dev())
-
-
-def estimate_cov(image, k, k_m=1):
-    assert k > k_m
-    image = np.array(image.to("cpu"))
-    image = np.transpose(image, [1, 2, 0])
-    blur = cv.blur(image, (k, k))
-    noise = blur - image
-    noise = noise.reshape([-1, noise.shape[-1]])
-    cov = noise.T @ noise / noise.shape[0] * (k**2) / (k**2 - k_m**2)
-    cov[np.abs(cov) < 2e-3] = 0
-    return th.from_numpy(cov.astype(np.float32)).to(dist_util.dev())
-
-
-def calc_covariance(noise, true):
-    noise = noise.reshape([noise.shape[0], -1])
-    true = true.reshape([true.shape[0], -1])
-    noise = noise - true
-    cov = noise @ noise.T / noise.shape[1]
-    return cov
-
-        
-def plot_spectrum(pred, target, save, pos=(0.5, 0.5)):
-    C, H, W = pred.shape
-    x, y = int(pos[0]*W), int(pos[1]*H)
-    pred = pred[:, y, x]
-    target = target[:, y, x]
-    plt.plot(pred, label="pred")
-    plt.plot(target, label="target")
-    plt.legend()
-    plt.savefig(save)
-    plt.close()
 
 
 def main():
@@ -200,11 +159,6 @@ def main():
     logger.log(f"average SSIM: {assim}")
     logger.log(f"average SAM: {asam}")
 
-
-def load_yaml(file_path: str) -> dict:
-    with open(file_path) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    return config
 
 if __name__ == "__main__":
     cfg = {
