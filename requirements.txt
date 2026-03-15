@@ -73,7 +73,7 @@ opencv-python==4.13.0.90
 orjson==3.11.6
 packaging==26.0
 pandas==2.3.3
-Pillow==10.3.0
+Pillow==12.1.1
 piq==0.8.0
 platformdirs==4.5.1
 propcache==0.4.1
