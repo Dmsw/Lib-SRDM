@@ -34,31 +34,17 @@ At inference, the posterior gradient is computed analytically (see `measurement.
 
 ## Environment Setup
 
-The environment is managed with Conda. A full Conda environment specification (in YAML format) is provided in `requirement.txt`.
+Install all pip dependencies using the provided `requirements.txt`:
 
 ```bash
-conda env create -f requirement.txt
-conda activate DiffUn
+pip install -r requirements.txt
 ```
 
-Key dependencies:
-
-| Package | Version |
-|---------|---------|
-| Python | 3.7 |
-| PyTorch | 1.12.1 (CUDA 10.2) |
-| NumPy | 1.21.5 |
-| OpenCV | 4.9.0 |
-| einops | 0.6.1 |
-| h5py / hdf5storage | 3.8 / 0.1.19 |
-| piq | 0.8.0 |
-| scikit-learn | 1.0.2 |
-| scipy | 1.7.3 |
-
-For the spectral library generation pipeline you additionally need:
+The following packages must be installed separately from source:
 
 ```bash
-pip install supervision torchvision
+# CLIP
+pip install git+https://github.com/openai/CLIP.git
 # RAM++ — https://github.com/xinyu1205/recognize-anything
 # GroundingDINO — https://github.com/IDEA-Research/GroundingDINO
 # SAM-HQ — https://github.com/SysCV/sam-hq
@@ -239,7 +225,8 @@ srf_tools.py                # Spectral response function (SRF) loading and RGB s
 illuminant.py               # CIE illuminant loading and spectral relighting utilities
 awb.py                      # Automatic white balance (Gray World and White Block methods)
 lib_and_mask.py             # Per-image spectral library and segmentation mask generation
-requirement.txt             # Full Conda environment specification
+requirement.txt             # Legacy Conda environment specification (YAML)
+requirements.txt            # pip requirements file (all pip-installable dependencies)
 ```
 
 ---
