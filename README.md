@@ -130,7 +130,7 @@ or directly:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python scripts/hsi_train.py \
-    --data_dir "/path/to/ICVL/" \
+    --data_dir "/path/to/CAVE/" \
     --batch_size 8 \
     --save_interval 20000 \
     --model_config config/model_config.yaml \
@@ -156,11 +156,8 @@ Key arguments:
 Run Lib-SRDM inference using a pre-built spectral library (see [Spectral Library Generation](#spectral-library-generation)):
 
 ```bash
-cd run
-bash spec+hsi_denoise.sh
+python scripts/hsi_spr.py
 ```
-
-This calls `scripts/hsi_spr.py` with the `spectral_kwargs` and `library_kwargs` populated in the configuration dictionary at the bottom of that script.
 
 ---
 
