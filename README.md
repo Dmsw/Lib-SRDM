@@ -41,27 +41,31 @@ conda env create -f requirement.txt
 conda activate DiffUn
 ```
 
-Key dependencies:
+Key dependencies (versions reflect the tested runtime environment):
 
 | Package | Version |
 |---------|---------|
-| Python | 3.7 |
-| PyTorch | 1.12.1 (CUDA 10.2) |
-| NumPy | 1.21.5 |
-| OpenCV | 4.9.0 |
-| einops | 0.6.1 |
-| h5py / hdf5storage | 3.8 / 0.1.19 |
+| PyTorch | 2.5.1 |
+| torchaudio | 2.5.1 |
+| torchvision | 0.20.1 |
+| NumPy | 1.26.4 |
+| opencv-python | 4.13.0.90 |
+| h5py | 3.15.1 |
 | piq | 0.8.0 |
-| scikit-learn | 1.0.2 |
-| scipy | 1.7.3 |
+| scipy | 1.15.3 |
+| diffusers | 0.36.0 |
+| transformers | 4.29.2 |
+| timm | 0.4.12 |
+| supervision | 0.13.0 |
+| huggingface-hub | 0.36.0 |
+| safetensors | 0.7.0 |
 
-For the spectral library generation pipeline you additionally need:
+For the spectral library generation pipeline, the following packages are required and are included in the environment above. Install from source if not already present:
 
 ```bash
-pip install supervision torchvision
 # RAM++ — https://github.com/xinyu1205/recognize-anything
-# GroundingDINO — https://github.com/IDEA-Research/GroundingDINO
-# SAM-HQ — https://github.com/SysCV/sam-hq
+# GroundingDINO — https://github.com/IDEA-Research/GroundingDINO  (groundingdino 0.1.0)
+# SAM-HQ — https://github.com/SysCV/sam-hq  (segment_anything 1.0)
 ```
 
 ---
