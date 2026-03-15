@@ -7,6 +7,8 @@ import glob
 import random
 import cv2
 import piq
+import yaml
+import matplotlib.pyplot as plt
 
 
 def tensor_2_mode_product(tensor: torch.Tensor, P):
@@ -156,5 +158,129 @@ def denormalize(x, mean, std):
     x: (c, h, w)
     """
     return x * std + mean
+
+
+def load_yaml(file_path: str) -> dict:
+    """Load YAML configuration file.
+    
+    Args:
+        file_path: Path to the YAML configuration file
+        
+    Returns:
+        Dictionary containing the configuration
+    """
+    with open(file_path) as f:
+        config = yaml.load(f, Loader=yaml.SafeLoader)
+    return config
+
+
+def estimate_sigma(image, k, k_m=1):
+    """Estimate noise standard deviation from image using blur method.
+    
+    Args:
+        image: Input image tensor (C, H, W)
+        k: Blur kernel size
+        k_m: Secondary kernel parameter (default: 1), must be less than k
+        
+    Returns:
+        Tensor of standard deviations per channel
+        
+    Raises:
+        AssertionError: If k <= k_m
+    """
+    from guided_diffusion import dist_util
+    assert k > k_m
+    image = np.array(image.to("cpu"))
+    image = np.transpose(image, [1, 2, 0])
+    blur = cv2.blur(image, (k, k))
+    v = np.var(blur - image, axis=(0, 1))
+    std = np.sqrt(v*(k**2)/(k**2-k_m**2))
+    return torch.from_numpy(std).to(dist_util.dev())
+
+
+# Threshold for filtering small covariance values
+COV_THRESHOLD = 2e-3
+
+
+def estimate_cov(image, k, k_m=1):
+    """Estimate noise covariance from image using blur method.
+    
+    Args:
+        image: Input image tensor (C, H, W)
+        k: Blur kernel size
+        k_m: Secondary kernel parameter (default: 1), must be less than k
+        
+    Returns:
+        Covariance matrix (C, C) with small values (<2e-3) filtered to zero
+        
+    Raises:
+        AssertionError: If k <= k_m
+    """
+    from guided_diffusion import dist_util
+    assert k > k_m
+    image = np.array(image.to("cpu"))
+    image = np.transpose(image, [1, 2, 0])
+    blur = cv2.blur(image, (k, k))
+    noise = blur - image
+    noise = noise.reshape([-1, noise.shape[-1]])
+    cov = noise.T @ noise / noise.shape[0] * (k**2) / (k**2 - k_m**2)
+    cov[np.abs(cov) < COV_THRESHOLD] = 0
+    return torch.from_numpy(cov.astype(np.float32)).to(dist_util.dev())
+
+
+def calc_covariance(noise, true):
+    """Calculate covariance matrix of the noise.
+    
+    Args:
+        noise: Noise tensor (C, H, W)
+        true: True signal tensor (C, H, W)
+        
+    Returns:
+        Covariance matrix of the noise (C, C)
+    """
+    noise = noise.reshape([noise.shape[0], -1])
+    true = true.reshape([true.shape[0], -1])
+    noise = noise - true
+    cov = noise @ noise.T / noise.shape[1]
+    return cov
+
+
+def random_build_spectral_lib(hsi, num):
+    """Build random spectral library from HSI data.
+    
+    Args:
+        hsi: Hyperspectral image array (C, H, W) or (C, N)
+        num: Number of random spectra to select
+        
+    Returns:
+        Selected spectral library (C, num)
+        
+    Note:
+        If num exceeds available samples, numpy will raise an error.
+    """
+    hsi = hsi.reshape([hsi.shape[0], -1])
+    idx = np.random.choice(hsi.shape[1], num, replace=False)
+    return hsi[:, idx]
+
+
+def plot_spectrum(pred, target, save, pos=(0.5, 0.5)):
+    """Plot spectrum comparison at a given position.
+    
+    Args:
+        pred: Predicted spectrum array (C, H, W)
+        target: Target spectrum array (C, H, W)
+        save: File path string where to save the plot
+        pos: Tuple of (x_ratio, y_ratio) for sample position (default: (0.5, 0.5))
+             Values should be in [0, 1] range
+    """
+    C, H, W = pred.shape
+    x, y = int(pos[0]*W), int(pos[1]*H)
+    pred = pred[:, y, x]
+    target = target[:, y, x]
+    plt.plot(pred, label="pred")
+    plt.plot(target, label="target")
+    plt.legend()
+    plt.savefig(save)
+    plt.close()
 
 
