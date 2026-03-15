@@ -1,8 +1,8 @@
-# Lib-SRDM: RGB-Image-Enhanced Hyperspectral Image Denoising with Diffusion Models
+# Lib-SRDM: Library-guided Spectral-prior Diffusion Model for HSI Reconstruction
 
-This repository implements a library-guided, spectral-prior diffusion model (Lib-SRDM) for hyperspectral image (HSI) denoising and spectral reconstruction. The framework leverages pre-trained diffusion models in both the spatial (HSI) and spectral domains, optionally guided by an RGB image or a scene-adaptive spectral library built with open-vocabulary segmentation.
+This repository implements a library-guided, spectral-prior diffusion model (Lib-SRDM) for hyperspectral image (HSI) spectral super-resolution and relighting. The framework leverages pre-trained diffusion models in both the spatial (HSI) and spectral domains, guided by a scene-adaptive spectral library built with open-vocabulary segmentation.
 
-This project is built on top of [guided-diffusion](https://github.com/openai/guided-diffusion). The pre-trained RGB diffusion model used in the paper is `256x256_diffusion_uncond.pt`, available from the same repository.
+This project is built on top of [guided-diffusion](https://github.com/openai/guided-diffusion).
 
 ---
 
@@ -14,10 +14,7 @@ This project is built on top of [guided-diffusion](https://github.com/openai/gui
 - [Pre-trained Models](#pre-trained-models)
 - [Spectral Library Generation](#spectral-library-generation)
 - [Training the HSI Diffusion Model](#training-the-hsi-diffusion-model)
-- [Denoising / Inference](#denoising--inference)
-  - [HSI-only Denoising](#hsi-only-denoising)
-  - [RGB-guided HSI Denoising](#rgb-guided-hsi-denoising)
-  - [Spectral-Library-guided HSI Denoising](#spectral-library-guided-hsi-denoising)
+- [Inference](#inference)
 - [Spectral Super-resolution & Relighting](#spectral-super-resolution--relighting)
 - [Project Structure](#project-structure)
 - [Acknowledgements](#acknowledgements)
@@ -26,11 +23,10 @@ This project is built on top of [guided-diffusion](https://github.com/openai/gui
 
 ## Overview
 
-Lib-SRDM solves blind HSI restoration (denoising, spectral super-resolution, relighting) by combining:
+Lib-SRDM solves HSI restoration (spectral super-resolution, relighting) by combining:
 
 1. **Spatial HSI Diffusion Model** – a U-Net-based DDPM trained on hyperspectral data.
 2. **Spectral Prior Model** – a lightweight spectral model that acts as a scene-adaptive spectral library prior, built per-image using open-vocabulary segmentation (RAM++ + GroundingDINO + SAM-HQ).
-3. **RGB-image guidance** (optional) – an unconditional RGB diffusion model fuses spatial information from an aligned RGB photograph into the HSI reverse diffusion process.
 
 At inference, the posterior gradient is computed analytically (see `measurement.py`) and injected into each diffusion step, steering the sample towards measurements while preserving the learned prior.
 
@@ -98,21 +94,6 @@ num_channels: 128
 num_res_blocks: 1
 attention_resolutions: "16"
 ...
-```
-
-### RGB Diffusion Model
-
-Download the unconditional 256×256 model from [openai/guided-diffusion](https://github.com/openai/guided-diffusion):
-
-```bash
-wget https://openaipublic.blob.core.windows.net/diffusion/jul-2021/256x256_diffusion_uncond.pt
-```
-
-Update `model_path` in `config/model_config_rgb.yaml`:
-
-```yaml
-# config/model_config_rgb.yaml
-model_path: "/path/to/256x256_diffusion_uncond.pt"
 ```
 
 ### Open-vocabulary Segmentation Checkpoints (for Lib-SRDM)
@@ -184,67 +165,9 @@ Key arguments:
 
 ---
 
-## Denoising / Inference
+## Inference
 
-### HSI-only Denoising
-
-Uses only the trained HSI diffusion model (no RGB guidance).
-
-```bash
-cd run
-bash hsi_denoise.sh
-```
-
-```bash
-CUDA_VISIBLE_DEVICES=0 python scripts/hsi_denoise.py \
-    --base_samples "/path/to/cave/noisy/" \
-    --save_dir    "results/cave/hsi_only/" \
-    --model_config config/model_config.yaml \
-    --in_channels 31 \
-    --range_t 0 \
-    --num_samples 3 \
-    --l1 2
-```
-
-### RGB-guided HSI Denoising
-
-Fuses an RGB diffusion model into the denoising process via measurement gradients.
-
-```bash
-cd run
-bash rgb+hsi_denoise.sh
-```
-
-```bash
-CUDA_VISIBLE_DEVICES=0 python scripts/hsi_denoise.py \
-    --base_samples     "/path/to/cave/noisy/" \
-    --save_dir         "results/cave/rgb+hsi/" \
-    --model_config     config/model_config.yaml \
-    --rgb_model_config config/model_config_rgb.yaml \
-    --in_channels 31 \
-    --range_t 0 \
-    --num_samples 3 \
-    --l1 2 \
-    --l2 0.52
-```
-
-Key arguments (all modes):
-
-| Argument | Description |
-|----------|-------------|
-| `--base_samples` | Path to noisy HSI dataset |
-| `--save_dir` | Path to save denoised results |
-| `--model_config` | Path to HSI DM YAML configuration |
-| `--rgb_model_config` | Path to RGB DM YAML config (RGB-guided only) |
-| `--in_channels` | Number of spectral bands (e.g. 31) |
-| `--range_t` | Number of final diffusion steps run unconditionally |
-| `--num_samples` | Number of images to process |
-| `--l1` | Measurement gradient index / step for HSI guidance |
-| `--l2` | Fusion weight of the RGB DM (RGB-guided only) |
-
-### Spectral-Library-guided HSI Denoising
-
-Uses a pre-built spectral library (see [Spectral Library Generation](#spectral-library-generation)) as a scene-adaptive spectral prior alongside the HSI DM.
+Run Lib-SRDM inference using a pre-built spectral library (see [Spectral Library Generation](#spectral-library-generation)):
 
 ```bash
 cd run
@@ -263,7 +186,6 @@ Additional tasks are provided as standalone scripts:
 |--------|------|
 | `scripts/hsi_spr.py` | RGB → HSI spectral super-resolution using the Lib-SRDM pipeline |
 | `scripts/hsi_relighting.py` | HSI relighting (change illuminant from source to target) |
-| `scripts/hsi_msfa.py` | HSI reconstruction from MSFA (multi-spectral filter array) raw images |
 | `scripts/ablative.py` | Ablation study runner |
 
 Each script contains a `cfg` dictionary at the top that controls all paths and hyperparameters. Edit the relevant fields before running.
@@ -275,7 +197,6 @@ Each script contains a `cfg` dictionary at the top that controls all paths and h
 ```
 config/
   model_config.yaml         # U-Net HSI diffusion model configuration
-  model_config_rgb.yaml     # RGB diffusion model configuration
   spectral_dm.yaml          # Spectral diffusion model configuration
   spectral_prior.yaml       # Spectral prior model configuration
 
@@ -299,17 +220,13 @@ guided_diffusion/
   respace.py                # Timestep respacing
 
 run/
-  hsi_denoise.sh            # HSI-only denoising script
-  rgb+hsi_denoise.sh        # RGB-guided HSI denoising script
-  spec+hsi_denoise.sh       # Spectral-library-guided HSI denoising script
+  spec+hsi_denoise.sh       # Spectral-library-guided inference script
   train_hsi.sh              # HSI DM training script
 
 scripts/
   hsi_train.py              # Train the HSI diffusion model
-  hsi_denoise.py            # HSI denoising (HSI-only or RGB-guided)
   hsi_spr.py                # Spectral super-resolution (RGB → HSI)
   hsi_relighting.py         # HSI relighting
-  hsi_msfa.py               # HSI reconstruction from MSFA
   gen_spectral_library.py   # Build the per-class spectral library
   image_train.py            # Train the RGB diffusion model
   ablative.py               # Ablation experiments
@@ -320,9 +237,7 @@ utils.py                    # Metric computation (PSNR, SSIM, SAM), noise estima
                             #   covariance estimation, spectral plotting, and I/O helpers
 srf_tools.py                # Spectral response function (SRF) loading and RGB synthesis
 illuminant.py               # CIE illuminant loading and spectral relighting utilities
-msfa.py                     # Multi-spectral filter array (MSFA) forward and pseudo-inverse model
 awb.py                      # Automatic white balance (Gray World and White Block methods)
-wb_estimator.py             # Bilinear WB filter for MSFA demosaicing
 lib_and_mask.py             # Per-image spectral library and segmentation mask generation
 requirement.txt             # Full Conda environment specification
 ```
@@ -333,9 +248,8 @@ requirement.txt             # Full Conda environment specification
 
 This project builds on the following open-source work:
 
-- [guided-diffusion](https://github.com/openai/guided-diffusion) (OpenAI) – base diffusion model framework and pre-trained RGB model.
+- [guided-diffusion](https://github.com/openai/guided-diffusion) (OpenAI) – base diffusion model framework.
 - [Recognize Anything (RAM++)](https://github.com/xinyu1205/recognize-anything) – open-vocabulary image tagging.
 - [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) – open-set object detection.
 - [SAM-HQ](https://github.com/SysCV/sam-hq) – high-quality segment-anything model.
 - [Grounded-Segment-Anything](https://github.com/IDEA-Research/Grounded-Segment-Anything) – integration of GroundingDINO and SAM.
-  
