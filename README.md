@@ -34,38 +34,20 @@ At inference, the posterior gradient is computed analytically (see `measurement.
 
 ## Environment Setup
 
-The environment is managed with Conda. A full Conda environment specification (in YAML format) is provided in `requirement.txt`.
+Install all pip dependencies using the provided `requirements.txt`:
 
 ```bash
-conda env create -f requirement.txt
-conda activate DiffUn
+pip install -r requirements.txt
 ```
 
-Key dependencies (versions reflect the tested runtime environment):
-
-| Package | Version |
-|---------|---------|
-| PyTorch | 2.5.1 |
-| torchaudio | 2.5.1 |
-| torchvision | 0.20.1 |
-| NumPy | 1.26.4 |
-| opencv-python | 4.13.0.90 |
-| h5py | 3.15.1 |
-| piq | 0.8.0 |
-| scipy | 1.15.3 |
-| diffusers | 0.36.0 |
-| transformers | 4.29.2 |
-| timm | 0.4.12 |
-| supervision | 0.13.0 |
-| huggingface-hub | 0.36.0 |
-| safetensors | 0.7.0 |
-
-For the spectral library generation pipeline, the following packages are required and are included in the environment above. Install from source if not already present:
+The following packages must be installed separately from source:
 
 ```bash
+# CLIP
+pip install git+https://github.com/openai/CLIP.git
 # RAM++ — https://github.com/xinyu1205/recognize-anything
-# GroundingDINO — https://github.com/IDEA-Research/GroundingDINO  (groundingdino 0.1.0)
-# SAM-HQ — https://github.com/SysCV/sam-hq  (segment_anything 1.0)
+# GroundingDINO — https://github.com/IDEA-Research/GroundingDINO
+# SAM-HQ — https://github.com/SysCV/sam-hq
 ```
 
 ---
@@ -243,7 +225,8 @@ srf_tools.py                # Spectral response function (SRF) loading and RGB s
 illuminant.py               # CIE illuminant loading and spectral relighting utilities
 awb.py                      # Automatic white balance (Gray World and White Block methods)
 lib_and_mask.py             # Per-image spectral library and segmentation mask generation
-requirement.txt             # Full Conda environment specification
+requirement.txt             # Legacy Conda environment specification (YAML)
+requirements.txt            # pip requirements file (all pip-installable dependencies)
 ```
 
 ---
