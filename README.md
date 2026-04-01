@@ -222,7 +222,6 @@ srf_tools.py                # Spectral response function (SRF) loading and RGB s
 illuminant.py               # CIE illuminant loading and spectral relighting utilities
 awb.py                      # Automatic white balance (Gray World and White Block methods)
 lib_and_mask.py             # Per-image spectral library and segmentation mask generation
-requirement.txt             # Legacy Conda environment specification (YAML)
 requirements.txt            # pip requirements file (all pip-installable dependencies)
 ```
 
