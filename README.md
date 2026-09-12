@@ -1,5 +1,7 @@
 # Lib-SRDM: Library-guided Spectral-prior Diffusion Model for HSI Reconstruction
 
+Accepted by the 34th ACM International Conference on Multimedia (ACM MM 2026).
+
 This repository implements a library-guided, spectral-prior diffusion model (Lib-SRDM) for hyperspectral image (HSI) spectral super-resolution and relighting. The framework leverages pre-trained diffusion models in both the spatial (HSI) and spectral domains, guided by a scene-adaptive spectral library built with open-vocabulary segmentation.
 
 This project is built on top of [guided-diffusion](https://github.com/openai/guided-diffusion).
@@ -236,3 +238,15 @@ This project builds on the following open-source work:
 - [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) – open-set object detection.
 - [SAM-HQ](https://github.com/SysCV/sam-hq) – high-quality segment-anything model.
 - [Grounded-Segment-Anything](https://github.com/IDEA-Research/Grounded-Segment-Anything) – integration of GroundingDINO and SAM.
+
+
+## Citation
+```
+@inproceedings{Deng2026srdrecitfy,
+  author    = {Keli Deng and Yimin Hu and Yuntao Qian},
+  title     = {SRD-Rectify: Super-Resolution Diffusion Model as a Rectifying Prior for Hyperspectral and Multispectral Image Fusion},
+  booktitle = {Proceedings of the 34th ACM International Conference on Multimedia},
+  year      = {2026},
+  doi       = {10.1145/3767308.3836238}
+}
+```
